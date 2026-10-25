@@ -1,0 +1,81 @@
+{
+ "packs": [
+  {
+   "id": "pop",
+   "name": "Pop",
+   "code": "POP",
+   "blurb": "Chart pop, late 90s to now",
+   "color": "#F0C231",
+   "total": 3156,
+   "easy": 474,
+   "medium": 947,
+   "hard": 1735
+  },
+  {
+   "id": "rap",
+   "name": "Rap",
+   "code": "RAP",
+   "blurb": "Hip-hop, from the SoundCloud era back to the icons",
+   "color": "#2E5BE8",
+   "total": 2840,
+   "easy": 426,
+   "medium": 852,
+   "hard": 1562
+  },
+  {
+   "id": "rock",
+   "name": "Rock",
+   "code": "RCK",
+   "blurb": "Riffs, arenas and college radio",
+   "color": "#E4483F",
+   "total": 2920,
+   "easy": 438,
+   "medium": 876,
+   "hard": 1606
+  },
+  {
+   "id": "indie",
+   "name": "Indie",
+   "code": "IND",
+   "blurb": "Bedroom pop, indie rock and the alt-R&B in between",
+   "color": "#8FD3F4",
+   "total": 2571,
+   "easy": 386,
+   "medium": 771,
+   "hard": 1414
+  },
+  {
+   "id": "anime",
+   "name": "Anime",
+   "code": "ANI",
+   "blurb": "Openings, endings and inserts",
+   "color": "#E8672A",
+   "total": 1513,
+   "easy": 227,
+   "medium": 454,
+   "hard": 832
+  },
+  {
+   "id": "kpop",
+   "name": "K-Pop",
+   "code": "KOR",
+   "blurb": "Idols, soloists and the Hallyu wave",
+   "color": "#BC5FE3",
+   "total": 1780,
+   "easy": 267,
+   "medium": 534,
+   "hard": 979
+  },
+  {
+   "id": "vgm",
+   "name": "Game Music",
+   "code": "VGM",
+   "blurb": "Chiptune, boss themes and open worlds",
+   "color": "#4ACF8B",
+   "total": 2357,
+   "easy": 354,
+   "medium": 707,
+   "hard": 1296
+  }
+ ]
+}

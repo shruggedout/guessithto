@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guess It, HTO</title>
+<meta name="description" content="Name the song from a tenth of a second. Seven crates, thousands of songs, three difficulties, and a crate of your own from Spotify.">
+<meta name="theme-color" content="#121212">
+<link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/plexmono-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+</head>
+<body>
+
+<!-- ----------------------------------------------------------- welcome -->
+<!-- Shown once per browser session (see boot() in src/app.js). It sits over the
+     whole app, which is made inert underneath, and PLAY hands over to the game. -->
+<section id="welcome" class="welcome" aria-labelledby="welcome-line" hidden>
+  <div class="welcome-aurora" aria-hidden="true"></div>
+  <div class="welcome-inner">
+    <img class="welcome-logo" src="images/logo.png" alt="" width="160" height="160">
+    <p class="welcome-kicker">Guess It, HTO</p>
+    <h1 id="welcome-line" class="welcome-line"><span class="w" style="--w:0">LET'S</span> <span class="w" style="--w:1">SEE</span> <span class="w" style="--w:2">IF</span> <span class="w" style="--w:3">YOU</span> <span class="w" style="--w:4">CAN</span> <span class="w" style="--w:5">GUESS</span> <span class="w" style="--w:6">THE</span> <span class="w" style="--w:7">SONG,</span> <span class="w" style="--w:8">HTO!</span></h1>
+    <button id="welcome-play" class="welcome-play" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+      <span>PLAY</span>
+    </button>
+  </div>
+</section>
+
+<header class="topbar">
+  <span id="breadcrumb" class="breadcrumb"></span>
+  <button id="go-home" class="wordmark" type="button" aria-label="Guess It, HTO, back to start">
+    Guess It, HTO
+  </button>
+  <div class="topbar-actions">
+    <button id="open-help" class="keybtn" type="button" data-key="?">Help</button>
+    <button id="toggle-theme" class="keybtn" type="button" data-key="T">Theme</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- -------------------------------------------------------------- home -->
+  <section id="home">
+    <h1 class="display" data-reveal>Guess It, HTO</h1>
+    <p class="tagline" data-reveal style="--d:80ms">Name the song from a tenth of a second.</p>
+
+    <section class="daily" aria-labelledby="daily-heading">
+      <div class="daily-head" data-reveal style="--d:60ms">
+        <span class="mode-kicker">Daily</span>
+        <h2 id="daily-heading" class="mode-name">Today's songs</h2>
+        <p id="daily-blurb" class="mode-blurb">One song per genre, the same for everyone. One go at each.</p>
+        <span id="daily-date" class="mode-meta">—</span>
+      </div>
+      <div id="daily-list" class="daily-list" role="group" aria-label="Today's dailies by genre">
+        <div class="skeleton">
+          <div class="skeleton-bar"></div>
+          <div class="skeleton-bar"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="modes">
+      <button id="pick-endless" class="mode" type="button" style="--c:#2AB8C4; --d:120ms" data-reveal>
+        <span class="mode-kicker">Endless</span>
+        <span class="mode-name">Play on</span>
+        <span class="mode-blurb">Pick your genres and difficulty, then keep going.</span>
+        <span id="endless-count" class="mode-meta">—</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------- crate -->
+  <section id="crate" hidden>
+    <h2 class="display display--sm" data-reveal>Pick your genres</h2>
+
+    <div class="picker-head" data-reveal>
+      <p class="label" id="packs-label">Genres</p>
+      <div class="bulk">
+        <button id="select-all" class="linky" type="button">All</button>
+        <button id="select-none" class="linky" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div id="pack-chips" class="chips" role="group" aria-labelledby="packs-label" data-reveal>
+      <div class="skeleton">
+        <div class="skeleton-bar"></div>
+        <div class="skeleton-bar"></div>
+      </div>
+    </div>
+
+    <div id="personal" class="personal" data-reveal>
+      <div class="personal-head">
+        <p class="label">Your Music</p>
+        <span id="personal-meta" class="summary"></span>
+      </div>
+      <span id="personal-pct" class="personal-pct" hidden>0%</span>
+      <p id="personal-blurb" class="personal-blurb"></p>
+      <div id="personal-progress" class="personal-progress" hidden>
+        <i id="personal-bar" class="personal-bar"></i>
+      </div>
+      <div class="personal-actions">
+        <button id="spotify-connect" class="btn" type="button">Connect Spotify</button>
+        <button id="spotify-refresh" class="btn btn--quiet" type="button" hidden>Refresh</button>
+        <button id="spotify-cancel" class="btn btn--quiet" type="button" hidden>Stop</button>
+        <button id="spotify-remove" class="linky" type="button" hidden>Remove</button>
+      </div>
+    </div>
+
+    <p class="label" id="diff-label" data-reveal>Difficulty</p>
+    <div id="difficulty" class="segmented" role="group" aria-labelledby="diff-label" data-reveal></div>
+
+    <div class="picker-foot" data-reveal>
+      <span id="pack-summary" class="summary"></span>
+      <button id="start" class="btn btn--go" type="button">Start</button>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------------- game -->
+  <section id="game" hidden>
+    <p id="status" class="status" hidden></p>
+
+    <div class="player">
+      <div class="transport">
+        <button id="play" class="play" type="button" aria-label="Play clip">
+          <svg class="ico-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>
+          <svg class="ico-stop" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>
+        </button>
+        <div class="readout" aria-live="polite">
+          <span class="readout-label">Clip length</span>
+          <span id="clip-len" class="readout-val">0.1s</span>
+        </div>
+        <span id="attempt" class="attempt">Attempt 1 of 7</span>
+      </div>
+
+      <div class="scope">
+        <div id="wave-wrap" class="wave-wrap">
+          <canvas id="wave"></canvas>
+          <div id="cue" class="cue" style="left:0"></div>
+          <div id="playhead" class="playhead"></div>
+        </div>
+        <div class="wave-meta">
+          <span id="clock">0.00 / 0.10</span>
+          <span id="scrub-hint" class="hint">Drag to scrub</span>
+        </div>
+      </div>
+
+      <div id="ladder" class="ladder" role="img" aria-label="Unlocked audio"></div>
+
+      <div class="volume">
+        <label for="volume">Vol</label>
+        <input id="volume" type="range" min="0" max="100" value="80" aria-label="Volume">
+        <output id="volume-out" for="volume">80%</output>
+      </div>
+    </div>
+
+    <ol id="guesses" class="guesses"></ol>
+
+    <div class="guess-wrap">
+      <input id="guess" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+             placeholder="Type a title or an artist"
+             role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list">
+      <ul id="suggest" class="suggest" role="listbox" aria-label="Matching songs" hidden></ul>
+    </div>
+
+    <div class="controls">
+      <button id="skip" class="btn" type="button">Skip</button>
+      <button id="submit" class="btn btn--go" type="button" disabled>Guess</button>
+      <span id="remaining" class="remaining"></span>
+    </div>
+
+    <!-- ----------------------------------------------------------- reveal -->
+    <div id="reveal" class="reveal" hidden>
+      <div id="reveal-card" class="reveal-card" style="--c:#F0C231">
+        <span id="reveal-verdict" class="reveal-verdict"></span>
+        <img id="reveal-art" alt="" width="104" height="104" hidden>
+        <div class="reveal-meta">
+          <span id="reveal-title" class="reveal-title"></span>
+          <span id="reveal-artist" class="reveal-artist"></span>
+          <span id="reveal-album" class="reveal-album"></span>
+        </div>
+      </div>
+
+      <div class="reveal-actions">
+        <button id="share" class="btn btn--go" type="button">Share</button>
+        <button id="next" class="btn" type="button">Next song</button>
+        <button id="view-board" class="btn btn--quiet" type="button" data-close hidden>View board</button>
+      </div>
+
+      <p id="daily-note" class="note" hidden></p>
+    </div>
+  </section>
+</main>
+
+<!-- ------------------------------------------------------------- dialogs -->
+<dialog id="reveal-dialog" class="reveal-dialog" aria-label="Round result"></dialog>
+
+<dialog id="help-dialog">
+  <h2>How to play</h2>
+  <ol class="help-list">
+    <li>You hear the first <strong>0.1 seconds</strong> of a song.</li>
+    <li>Guess it, or skip. Either way the clip grows:
+        <strong>0.1, 0.5, 1, 2, 4, 8, 16 seconds</strong>.</li>
+    <li>Drag across the waveform to <strong>scrub</strong> anywhere inside what you
+        have unlocked, then hit play.</li>
+    <li>Seven tries. The sooner you get it, the better the share grid looks.</li>
+    <li>Right artist, wrong song shows in <strong>yellow</strong> — you are close.</li>
+    <li>For <strong>Anime</strong> and <strong>Game Music</strong>, naming the show
+        or the game it is from counts too.</li>
+  </ol>
+
+  <h3>Daily and Endless</h3>
+  <ol class="help-list">
+    <li><strong>Daily</strong> is one song per genre a day. Everyone gets the
+        same ones, and you get one go at each.</li>
+    <li><strong>Endless</strong> is yours: choose the genres and the difficulty,
+        and keep playing.</li>
+    <li><strong>Your Music</strong> is a crate built from your Spotify top tracks
+        and liked songs — connect it from the Endless picker.</li>
+  </ol>
+
+  <h3>Keys</h3>
+  <ol class="help-list">
+    <li><strong>Space</strong> plays the current clip.</li>
+    <li><strong>T</strong> switches theme, <strong>?</strong> opens this box.</li>
+    <li>On the waveform, <strong>arrows</strong> nudge the cue and
+        <strong>Enter</strong> plays.</li>
+  </ol>
+
+  <p class="note">
+    Clips are Apple Music's public 30 second previews, so they usually start
+    partway into a song rather than at the very first note.
+  </p>
+
+  <div class="dialog-foot">
+    <button data-close class="btn btn--go" type="button">Got it</button>
+  </div>
+</dialog>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

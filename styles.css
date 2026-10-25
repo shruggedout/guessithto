@@ -1,0 +1,2351 @@
+/* ==========================================================================
+   Earworm
+
+   A dark, minimal music-game skin in the spirit of Songless: a near-black
+   ground, one green action colour, rounded pills and cards, a centred narrow
+   column, and a segmented ladder for the seven tiers. Nothing here is copied
+   from Songless; it is the same general design language, drawn from scratch.
+
+   Each genre still owns a hue (the crate colour). It now shows as a dot and a
+   tint rather than a filled block, and it fills the reveal card, which is the
+   one place it may appear during play without leaking which crate a song is
+   from. See CLAUDE.md, "UI".
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ fonts */
+
+/* One variable file carries both axes: weight 100-900 and width 62-125%. That
+   is what lets the display type be heavy and condensed while the UI text stays
+   normal width, without shipping a second family. Self-hosted, so the site is
+   still a folder you upload with no build step and no third-party request. */
+@font-face {
+  font-family: 'Archivo';
+  src: url('fonts/archivo-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2122, U+2191, U+2193, U+2212;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('fonts/archivo-latin-ext.woff2') format('woff2');
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+1E00-1EFF, U+2020, U+20A0-20AB;
+}
+@font-face {
+  font-family: 'Plex Mono';
+  src: url('fonts/plexmono-400-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plex Mono';
+  src: url('fonts/plexmono-400-latin-ext.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+1E00-1EFF;
+}
+@font-face {
+  font-family: 'Plex Mono';
+  src: url('fonts/plexmono-500-latin.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plex Mono';
+  src: url('fonts/plexmono-500-latin-ext.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+1E00-1EFF;
+}
+
+/* ----------------------------------------------------------------- tokens */
+
+
+:root {
+  --sans: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --mono: 'Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Apple SD Gothic Neo',
+    'Noto Sans JP', 'Noto Sans KR', 'Yu Gothic', 'Malgun Gothic', sans-serif;
+
+  --t-xs: 0.75rem;
+  --t-sm: 0.875rem;
+  --t-base: 1rem;
+  --t-md: 1.125rem;
+  --t-lg: 1.375rem;
+  --t-xl: 1.75rem;
+
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  --s7: 3rem;
+  --s8: 4rem;
+
+  --r: 16px;
+  --r-card: 14px;
+  --r-folder: 18px; /* the reveal card */
+  --pill: 999px;
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --fast: 150ms;
+  --med: 240ms;
+
+  --z-suggest: 20;
+  --z-sticky: 30;
+  --z-modal: 50;
+  --z-welcome: 100;
+
+  --bg: #121212;
+  --bg-2: #1b1b1b;
+  --bg-3: #282828;
+  --ink: #fafafa;
+  --ink-2: #b3b3b3;
+  --ink-3: #959595;
+  --line: #262626;
+  --line-2: #3a3a3a;
+  --bad: #f28c94;
+  --scrim: rgba(0, 0, 0, 0.8);
+  --shadow: none;
+  --glow-a: transparent;
+  --glow-b: transparent;
+
+  /* The action colour. Always a filled block with dark text on it, so the same
+     value works on both grounds. --go-text is the same green for use as *text*,
+     where the light theme needs a darker one to stay legible. */
+  --go: #1ed760;
+  --go-ink: #04210f;
+  --go-text: #1ed760;
+
+  /* "Close": right artist, wrong song. Yellow, so it never reads as the green
+     of a correct answer. */
+  --close: #f4cf7a;
+  --close-text: #f4cf7a;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  /* intentionally empty: dark is the default; light only via the theme toggle */
+}
+
+:root[data-theme='light'] {
+  --bg: #ffffff;
+  --bg-2: #f4f4f4;
+  --bg-3: #e8e8e8;
+  --ink: #121212;
+  --ink-2: #4d4d4d;
+  --ink-3: #6b6b6b;
+  --line: #e3e3e3;
+  --line-2: #cfcfcf;
+  --bad: #b42318;
+  --scrim: rgba(255, 255, 255, 0.86);
+  --shadow: none;
+  --glow-a: transparent;
+  --glow-b: transparent;
+  --go-text: #11803a;
+  --close-text: #92600a;
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------------ reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Author-origin `display` on a class beats the UA sheet's [hidden] rule, and
+   several panels here are display:grid *and* toggled with the attribute. */
+[hidden] {
+  display: none !important;
+}
+
+
+body {
+  margin: 0;
+  background: radial-gradient(60rem 36rem at 10% -10%, var(--glow-a), transparent 62%),
+    radial-gradient(50rem 32rem at 100% 105%, var(--glow-b), transparent 62%), var(--bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--sans), var(--cjk);
+  font-size: var(--t-base);
+  line-height: 1.5;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ol,
+ul {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+:focus-visible {
+  outline: 2px solid var(--go);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--go);
+  color: var(--go-ink);
+}
+
+/* -------------------------------------------------------------- utilities */
+
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.label::before {
+  content: none;
+}
+
+.label::after {
+  content: none;
+}
+
+/* ---------------------------------------------------------------- display */
+
+/* Heavy and condensed, set to fill the measure. The width axis is doing the
+   work here, not a second typeface. */
+
+.display {
+  font-weight: 700;
+  font-size: clamp(2.25rem, 9vw, 3.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.015em;
+  word-spacing: 0.06em;
+  text-wrap: balance;
+  text-align: center;
+}
+
+.display:focus {
+  outline: none;
+}
+
+.display--sm {
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+}
+
+
+.tagline {
+  margin: calc(var(--s2) * -1) auto 0;
+  font-size: var(--t-md);
+  line-height: 1.4;
+  color: var(--ink-2);
+  max-width: 34ch;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.tagline--sm {
+  font-size: var(--t-base);
+  max-width: 48ch;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: 0.6rem 1.5rem;
+  min-height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--pill);
+  background: var(--bg-3);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--line-2);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+
+.btn:disabled {
+  background: var(--bg-2);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.btn--go {
+  background: var(--go);
+  border-color: var(--go);
+  color: var(--go-ink);
+  font-weight: 500;
+}
+
+.btn--go:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--go) 84%, #fff);
+  border-color: color-mix(in srgb, var(--go) 84%, #fff);
+  color: var(--go-ink);
+}
+
+.btn--go:disabled {
+  background: var(--bg-3);
+  border-color: transparent;
+  color: var(--ink-3);
+}
+
+
+.btn--quiet {
+  background: transparent;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.btn--quiet:hover {
+  color: var(--ink);
+  background: var(--bg-3);
+}
+
+/* ----------------------------------------------------------------- topbar */
+
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s5);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+
+
+.wordmark {
+  padding: 0.1rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: var(--t-md);
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: color var(--fast) var(--ease);
+}
+
+.wordmark:hover {
+  color: var(--go-text);
+}
+
+
+.breadcrumb {
+  justify-self: start;
+  max-width: 100%;
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* (the old "/ " prefix is gone; the breadcrumb sits alone on the left) */
+
+.breadcrumb:empty {
+  visibility: hidden;
+}
+
+.topbar-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+
+.keybtn {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--pill);
+  background: transparent;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+
+.keybtn::before {
+  content: attr(data-key);
+  display: inline-block;
+  min-width: 1.35em;
+  margin-right: 0.45em;
+  padding: 0.05em 0.3em;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.9em;
+  text-align: center;
+  color: var(--ink-3);
+}
+
+.keybtn:hover {
+  color: var(--ink);
+  background: var(--bg-2);
+}
+
+/* ----------------------------------------------------------------- layout */
+
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: var(--s7) var(--s5) var(--s8);
+}
+
+#home,
+#crate,
+#game {
+  display: grid;
+  gap: var(--s5);
+}
+
+#game {
+  gap: var(--s4);
+}
+
+/* ------------------------------------------------------------------ modes */
+
+/* Two blocks, no metaphor. The colour and the size carry the choice. */
+
+.modes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s3);
+  margin-top: var(--s2);
+}
+
+
+.mode {
+  --c: #888;
+  --on-c: #111;
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  padding: var(--s5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+/* The mode's own hue, kept as a small mark instead of a flood of colour. */
+.mode::before {
+  content: '';
+  position: absolute;
+  top: var(--s5);
+  right: var(--s5);
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.mode:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 8%, var(--bg-2));
+}
+
+.mode:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.mode:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+
+.mode-kicker {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+
+.mode-name {
+  margin-top: var(--s1);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  word-spacing: 0.05em;
+  line-height: 1.1;
+}
+
+
+.mode-blurb {
+  margin-top: var(--s1);
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  max-width: 40ch;
+}
+
+
+.mode-meta {
+  margin-top: var(--s3);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* ------------------------------------------------------------------ daily */
+
+/* One tile per crate, each in its own colour: the same folder-stack idea as
+   the picker, but every folder is a puzzle. Played tiles keep their colour and
+   show the result grid; unplayed ones are the invitation. */
+.daily {
+  display: grid;
+  gap: var(--s4);
+  margin-top: var(--s3);
+}
+
+.daily-head {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.daily-head .mode-name {
+  color: var(--ink);
+}
+
+.daily-head .mode-blurb {
+  color: var(--ink-2);
+  max-width: none;
+}
+
+.daily-head .mode-meta {
+  color: var(--ink-3);
+  margin-top: var(--s2);
+}
+
+
+.daily-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--s3);
+}
+
+
+.daily-tile {
+  --c: #888;
+  --on-c: #111;
+  position: relative;
+  display: grid;
+  gap: var(--s1);
+  align-content: start;
+  min-height: 6.75rem;
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.daily-tile::before {
+  content: '';
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-bottom: var(--s2);
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.daily-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 8%, var(--bg-2));
+}
+
+.daily-tile:active {
+  transform: translateY(-1px);
+}
+
+
+.daily-tile-name {
+  font-size: var(--t-base);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+
+.daily-tile-status {
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+/* Played tiles recede a touch so the unplayed ones read as "next". */
+.daily-tile.is-won {
+  border-color: color-mix(in srgb, var(--go) 45%, var(--line));
+}
+
+.daily-tile.is-lost {
+  border-color: color-mix(in srgb, var(--bad) 40%, var(--line));
+}
+
+.daily-tile.is-won:hover,
+.daily-tile.is-lost:hover {
+  border-color: var(--c);
+}
+
+.daily-tile-grid {
+  display: flex;
+  gap: 3px;
+  margin-top: auto;
+  padding-top: var(--s2);
+  min-height: 0.55rem;
+}
+
+
+.daily-tile-grid .cell {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 3px;
+  background: var(--line-2);
+}
+
+.daily-tile-grid .cell.wrong {
+  background: var(--bad);
+}
+
+.daily-tile-grid .cell.skip {
+  background: var(--ink-3);
+}
+
+.daily-tile-grid .cell.close {
+  background: var(--close);
+}
+
+.daily-tile-grid .cell.correct {
+  background: var(--go);
+}
+
+/* ------------------------------------------------------------------ chips */
+
+
+.picker-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  margin-top: var(--s3);
+}
+
+.picker-head .label {
+  flex: 1;
+}
+
+.bulk {
+  display: flex;
+  gap: var(--s3);
+}
+
+
+.linky {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--fast) var(--ease);
+}
+
+.linky:hover {
+  color: var(--go-text);
+}
+
+/* A flowing set of chips sized by their own content: dense enough that all 23
+   genres are visible at once, and conventional enough that nobody has to work
+   out what the control is. Colour still carries selection, but an unselected
+   chip keeps a swatch so the genre's identity survives being off. */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+
+.chip {
+  --c: #888;
+  --on-c: #111;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--line-2);
+  border-radius: var(--pill);
+  background: var(--bg-2);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+
+
+.chip::before {
+  content: '';
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--c);
+  opacity: 0.5;
+  flex: none;
+  transition: opacity var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.chip:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--c);
+  transform: translateY(-1px);
+}
+
+
+/* Selected: crate-coloured border and tint, a lit dot with a ring, and full ink.
+   Three cues that do not depend on motion or on telling hues apart. */
+.chip[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--c) 20%, var(--bg-2));
+  border-color: var(--c);
+  color: var(--ink);
+}
+
+.chip[aria-pressed='true']::before {
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 32%, transparent);
+}
+
+.chip[aria-pressed='true']:hover {
+  color: var(--ink);
+  border-color: var(--c);
+}
+
+.chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chip-name {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+
+.chip-count {
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* ------------------------------------------------------------- difficulty */
+
+/* One row, equal cells, however many segments there are (three, or four
+   when Your Music is the only crate and "All" joins). */
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+}
+
+
+.segmented button {
+  display: grid;
+  gap: 0.1rem;
+  padding: var(--s3) var(--s4);
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--ink-2);
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+/* (segments are separated by a gap now, not a rule) */
+
+.segmented button:hover {
+  background: var(--bg-3);
+  color: var(--ink);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--go);
+  color: var(--go-ink);
+}
+
+
+.seg-name {
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+.seg-note {
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.78;
+}
+
+
+.picker-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+  margin-top: var(--s2);
+}
+
+
+.summary {
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------------- your music */
+
+/* The Spotify import lives with the crates because it *is* a crate. It is a
+   quiet block: one line of state, one line of copy, the buttons. The green
+   arrives on the chip and the daily tile once there is something to play. */
+
+.personal {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+}
+
+.personal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+
+.personal-head .label {
+  margin: 0;
+}
+
+.personal-blurb {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+  max-width: 60ch;
+}
+
+.personal-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  margin-top: var(--s1);
+}
+
+.personal-actions .linky {
+  margin-left: auto;
+}
+
+/* While importing, the number is the interface: big, condensed, tabular so
+   it does not jitter as digits change, in the crate's green. */
+.personal-pct {
+  font-size: var(--t-xl);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #1db954;
+}
+
+.personal.is-busy {
+  border-color: color-mix(in srgb, #1db954 45%, var(--line));
+}
+
+.personal-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.personal-bar {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #1db954;
+  transition: width 300ms var(--ease);
+}
+
+/* A moving sheen so a stalled-looking bar (Apple's 4s pacing) still reads as alive. */
+.personal.is-busy .personal-progress {
+  background-image: linear-gradient(
+    90deg,
+    var(--line) 0%,
+    color-mix(in srgb, #1db954 25%, var(--line)) 50%,
+    var(--line) 100%
+  );
+  background-size: 200% 100%;
+  animation: sweep 1.6s linear infinite;
+}
+
+.motion-reduced .personal.is-busy .personal-progress {
+  animation: none;
+}
+
+/* -------------------------------------------------------------- transport */
+
+
+.transport {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s4);
+}
+
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 4.75rem;
+  height: 4.75rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--go);
+  color: var(--go-ink);
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--go) 26%, transparent);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease), box-shadow var(--med) var(--ease),
+    background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+
+.play:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.play:disabled {
+  background: var(--bg-3);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.play svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+
+.play .ico-stop,
+.play.playing .ico-play {
+  display: none;
+}
+
+.play.playing .ico-stop {
+  display: block;
+}
+
+.play.playing {
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--go) 24%, transparent);
+}
+
+/* --------------------------------------------------------------- waveform */
+
+.scope {
+  display: grid;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+/* The canvas shows exactly the unlocked window, always at full width. A fixed
+   16s axis renders the first tier as 0.6% of the element: invisible, and far
+   too small to put a cursor on. Rescaling keeps the scrub target full-size at
+   every tier, and the drawing stays honest — it is the real decoded buffer,
+   just zoomed. */
+
+.wave-wrap {
+  position: relative;
+  height: 5.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  cursor: ew-resize;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.wave-wrap.is-locked {
+  cursor: default;
+}
+
+.wave-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.playhead {
+  position: absolute;
+  inset-block: 0;
+  width: 1px;
+  background: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.playhead.on {
+  opacity: 1;
+}
+
+.cue {
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: var(--go);
+  pointer-events: none;
+}
+
+
+.cue::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 8px;
+  height: 6px;
+  border-radius: 0 0 3px 3px;
+  background: var(--go);
+}
+
+
+.wave-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.wave-meta .hint {
+  color: var(--ink-3);
+}
+
+/* ----------------------------------------------------------------- ladder */
+
+/* Seven equal segments, one per tier: Songless's progress-bar look. Equal
+   because the tiers are a ladder of steps, not a timeline; spacing them by
+   duration makes the first four unreadable. */
+
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+
+.rung {
+  padding: 0.5rem var(--s1);
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--ink-3);
+  background: var(--bg-2);
+  transition: background var(--med) var(--ease), color var(--med) var(--ease),
+    border-color var(--med) var(--ease);
+}
+
+/* (segments are separated by a gap now, not a rule) */
+
+.rung.lit {
+  background: color-mix(in srgb, var(--go) 18%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--go) 40%, var(--line));
+  color: var(--ink);
+}
+
+.rung.now {
+  background: var(--go);
+  border-color: var(--go);
+  color: var(--go-ink);
+  font-weight: 500;
+}
+
+/* ----------------------------------------------------------------- volume */
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+
+.volume label {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+
+.volume output {
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 4rem;
+  height: 1.25rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--go) 0 var(--pct, 80%),
+    var(--line-2) var(--pct, 80%) 100%
+  );
+}
+
+input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--go) 0 var(--pct, 80%),
+    var(--line-2) var(--pct, 80%) 100%
+  );
+}
+
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+/* ---------------------------------------------------------------- guesses */
+
+
+.guesses {
+  display: grid;
+  gap: 6px;
+}
+
+
+.guess-row {
+  display: grid;
+  grid-template-columns: 2rem 1.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: 0.4rem var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--bg-2);
+  min-height: 2.75rem;
+  color: var(--ink-3);
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
+}
+
+/* (rows are separate cards now, not one ruled list) */
+
+.guess-row .idx,
+.guess-row .mark,
+.guess-row .at {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.guess-row .text {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  font-size: var(--t-sm);
+}
+
+.guess-row .said {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* HTO's reaction to a miss: a second, quieter line under the guess. It wraps
+   (some lines are long) where the guess itself truncates. */
+.guess-row .react {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--ink-2);
+}
+
+.guess-row.close .react {
+  color: var(--ink-2);
+}
+
+.guess-row.just .react {
+  animation: react-in 360ms var(--ease) 60ms backwards;
+}
+
+@keyframes react-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+
+.guess-row.active {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--go) 55%, var(--line));
+  background: color-mix(in srgb, var(--go) 8%, var(--bg-2));
+}
+
+.guess-row.active .mark {
+  color: var(--go-text);
+}
+
+.guess-row.wrong {
+  color: var(--ink-2);
+}
+
+.guess-row.wrong .mark {
+  color: var(--bad);
+}
+
+/* Right artist, wrong song. Warm but not lit: the tint says "close" without
+   pretending to be the answer, which keeps the full fill for the real thing. */
+
+.guess-row.close {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--close) 60%, var(--line));
+  background: color-mix(in srgb, var(--close) 16%, var(--bg-2));
+}
+
+.guess-row.close .mark {
+  color: var(--close-text);
+  font-weight: 700;
+}
+
+.guess-row.correct {
+  background: var(--go);
+  border-color: var(--go);
+  color: var(--go-ink);
+}
+
+.guess-row.correct .idx,
+.guess-row.correct .mark,
+.guess-row.correct .at {
+  color: var(--go-ink);
+}
+
+/* ------------------------------------------------------------------ guess */
+
+.guess-wrap {
+  position: relative;
+}
+
+
+#guess {
+  width: 100%;
+  padding: 0.85rem 1.15rem;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  color: var(--ink);
+  font-size: var(--t-base);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+/* Placeholders need the same 4.5:1 as body text; --ink-3 would not clear it. */
+#guess::placeholder {
+  color: var(--ink-2);
+}
+
+#guess:focus {
+  border-color: var(--go);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--go) 22%, transparent);
+  outline: none;
+}
+
+#guess:disabled {
+  color: var(--ink-3);
+  background: transparent;
+}
+
+/* Opens upward so it never collides with the controls row beneath it. */
+
+.suggest {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: var(--z-suggest);
+  max-height: 17rem;
+  overflow-y: auto;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+
+.suggest li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: 0.6rem var(--s4);
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  font-size: var(--t-sm);
+}
+
+.suggest li:first-child {
+  border-top: 0;
+}
+
+.suggest li strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggest li span {
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* A work (the anime, the game) is a different kind of answer from a song, so
+   it wears a small mark instead of pretending to be a title. */
+.suggest li.work strong::before {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.5em;
+  border: 1.5px solid currentColor;
+  border-radius: 1px;
+  vertical-align: 0.05em;
+  opacity: 0.6;
+}
+
+.suggest li.hi {
+  background: var(--go);
+  color: var(--go-ink);
+}
+
+.suggest li.hi span {
+  color: var(--go-ink);
+  opacity: 0.8;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+
+.remaining {
+  margin-left: auto;
+  font-size: var(--t-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+/* ----------------------------------------------------------------- reveal */
+
+.reveal {
+  display: grid;
+  gap: var(--s4);
+}
+
+/* The answer arrives as its crate's folder, in that crate's colour. It is the
+   only place the genre colour appears during play — showing it any earlier
+   would leak which crate the song came from. */
+.reveal-card {
+  --c: var(--go);
+  --on-c: var(--go-ink);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'verdict verdict' 'art meta';
+  gap: var(--s4);
+  align-items: center;
+  padding: var(--s5);
+  border-radius: var(--r-folder);
+  background: var(--c);
+  color: var(--on-c);
+}
+
+
+.reveal-verdict {
+  grid-area: verdict;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+
+.reveal-card img {
+  grid-area: art;
+  width: 6.5rem;
+  height: 6.5rem;
+  border-radius: var(--r);
+  object-fit: cover;
+}
+
+.reveal-meta {
+  grid-area: meta;
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+
+.reveal-title {
+  font-size: var(--t-xl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  word-spacing: 0.05em;
+  text-wrap: balance;
+}
+
+.reveal-artist {
+  font-size: var(--t-md);
+}
+
+
+.reveal-album {
+  margin-top: var(--s2);
+  font-size: var(--t-xs);
+  opacity: 0.75;
+}
+
+.reveal-actions {
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.note {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+/* ----------------------------------------------------------------- status */
+
+.status {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+.skeleton {
+  display: grid;
+  gap: var(--s3);
+}
+
+
+.skeleton-bar {
+  height: 3.2rem;
+  border-radius: var(--r-card);
+  background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
+  animation: sweep 1.4s var(--ease) infinite;
+}
+
+.skeleton-bar:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.skeleton-bar:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes sweep {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------------------------------------------------------------- dialogs */
+
+
+dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  padding: var(--s5);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-folder);
+  background: var(--bg-2);
+  color: var(--ink);
+  z-index: var(--z-modal);
+}
+
+dialog::backdrop {
+  background: var(--scrim);
+}
+
+
+dialog h2 {
+  font-size: var(--t-lg);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s4);
+}
+
+
+dialog h3 {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin: var(--s5) 0 var(--s3);
+}
+
+.help-list {
+  display: grid;
+  gap: var(--s3);
+  counter-reset: step;
+}
+
+/* Normal flow, not grid. These items mix text nodes and inline <strong>, and as
+   grid children each of those becomes its own row: the copy shatters into one
+   word per line. The marker is positioned out of flow instead. */
+.help-list li {
+  position: relative;
+  padding-left: 1.75rem;
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+.help-list li::before {
+  counter-increment: step;
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0.15rem;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--ink-3);
+}
+
+.help-list strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+dialog .note {
+  margin-top: var(--s5);
+}
+
+.dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--s5);
+}
+
+/* The reveal takes the stage. The dialog itself has no chrome — the
+   crate-coloured card is the surface — and it pops from centre screen instead
+   of appending itself below the fold. */
+.reveal-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.reveal-dialog::backdrop {
+  background: var(--scrim);
+}
+
+.reveal-dialog[open] {
+  animation: pop 340ms var(--ease);
+}
+
+.reveal-dialog[open]::backdrop {
+  animation: fadein 240ms linear;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+}
+
+/* ---------------------------------------------------------------- welcome */
+
+/* The opening screen: one sentence, one button, over everything. Dark and
+   still, with a faint green glow behind the line. Entrance is a staggered rise
+   (bars, kicker, each word, then PLAY); `backwards` fill, not `both`, so once
+   an animation ends it stops owning the property and hover transforms work. */
+
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-welcome);
+  display: grid;
+  place-items: center;
+  padding: var(--s6) var(--s5);
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* Two soft blobs drifting very slowly: the "chill" in the opening screen. */
+.welcome-aurora {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.welcome-aurora::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(30rem 22rem at 28% 72%, var(--glow-a), transparent 70%),
+    radial-gradient(28rem 20rem at 74% 26%, var(--glow-b), transparent 70%);
+  animation: drift 26s ease-in-out infinite alternate;
+}
+
+.welcome-inner {
+  position: relative;
+}
+
+body.is-welcome {
+  overflow: hidden;
+}
+
+.welcome-inner {
+  display: grid;
+  justify-items: center;
+  gap: var(--s5);
+  width: 100%;
+  max-width: 36rem;
+  text-align: center;
+}
+
+.welcome-bars {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 3.5rem;
+}
+
+.welcome-bars i {
+  display: block;
+  width: 5px;
+  height: calc(var(--h, 60) * 1%);
+  border-radius: 3px;
+  background: var(--go);
+  transform-origin: center;
+  animation: bar-in 640ms var(--ease) backwards, bar-idle 3.2s ease-in-out infinite alternate;
+  animation-delay: calc(var(--n) * 55ms), calc(700ms + var(--n) * 140ms);
+}
+
+.welcome-bars i:nth-child(1) { --n: 0; --h: 38; }
+.welcome-bars i:nth-child(2) { --n: 1; --h: 70; }
+.welcome-bars i:nth-child(3) { --n: 2; --h: 100; }
+.welcome-bars i:nth-child(4) { --n: 3; --h: 56; }
+.welcome-bars i:nth-child(5) { --n: 4; --h: 84; }
+.welcome-bars i:nth-child(6) { --n: 5; --h: 46; }
+.welcome-bars i:nth-child(7) { --n: 6; --h: 92; }
+.welcome-bars i:nth-child(8) { --n: 7; --h: 62; }
+.welcome-bars i:nth-child(9) { --n: 8; --h: 34; }
+
+.welcome-kicker {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-indent: 0.28em; /* the trailing letter-space would otherwise skew centring */
+  color: var(--ink-3);
+  animation: rise 640ms var(--ease) 160ms backwards;
+}
+
+.welcome-line {
+  font-size: clamp(2rem, 8vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.welcome-line .w {
+  display: inline-block;
+  animation: rise 700ms var(--ease) backwards;
+  animation-delay: calc(300ms + var(--w) * 75ms);
+}
+
+.welcome-line .w:last-child {
+  color: var(--go-text);
+}
+
+.welcome-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: var(--s3);
+  padding: 1.05rem 2.75rem 1.05rem 2.4rem;
+  border: 0;
+  border-radius: var(--pill);
+  background: var(--go);
+  color: var(--go-ink);
+  font-size: var(--t-md);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  animation: rise 700ms var(--ease) 1150ms backwards, glow 2.8s ease-out 1900ms infinite;
+  transition: transform var(--fast) var(--ease), filter var(--fast) var(--ease);
+}
+
+.welcome-play svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+.welcome-play:hover {
+  transform: translateY(-2px) scale(1.03);
+  filter: brightness(1.06);
+}
+
+.welcome-play:active {
+  transform: scale(0.98);
+}
+
+.welcome.is-leaving {
+  pointer-events: none;
+  animation: welcome-out 440ms var(--ease) forwards;
+}
+
+@keyframes drift {
+  to {
+    transform: translate3d(5%, -4%, 0) rotate(7deg) scale(1.1);
+  }
+}
+
+@keyframes bar-in {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+}
+
+@keyframes bar-idle {
+  to {
+    transform: scaleY(0.62);
+  }
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--go) 42%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 20px transparent;
+  }
+}
+
+@keyframes welcome-out {
+  to {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+/* ------------------------------------------------------------------- depth */
+
+/* A soft, low shadow under the main surfaces, in place of hard borders alone. */
+.mode,
+.daily-tile,
+.personal,
+.wave-wrap,
+dialog {
+  box-shadow: var(--shadow);
+}
+
+/* ----------------------------------------------------------------- motion */
+
+/* Entrance, borrowed wholesale from dehpeh.dev: a short rise with a per-element
+   delay. The `.js` guard is the important part — without scripting the content
+   is simply visible, so a reveal that never fires (hidden tab, headless render,
+   a script that 404s) can never ship a blank page. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+}
+
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 520ms var(--ease), transform 520ms var(--ease);
+  transition-delay: var(--d, 0ms);
+}
+
+/* Chips stagger across the row rather than all arriving together. The index is
+   set from JS; capping it stops the 23rd chip waiting most of a second. */
+.chip {
+  animation: rise 420ms var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 22ms);
+}
+
+.guess-row.dealt {
+  animation: fadein 260ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
+}
+
+/* Theme swaps crossfade instead of snapping. The class is added for the length
+   of the transition and then removed, so it never taxes ordinary interaction. */
+.theming,
+.theming *,
+.theming ::before,
+.theming ::after {
+  transition: background-color 0.35s linear, color 0.35s linear, border-color 0.35s linear,
+    fill 0.35s linear !important;
+}
+
+
+.shake {
+  animation: shake 180ms var(--ease);
+}
+
+@keyframes shake {
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* Each guess row settles as it resolves — a state change, not decoration. */
+.guess-row.just {
+  animation: settle var(--med) var(--ease);
+}
+
+@keyframes settle {
+  from {
+    background-color: color-mix(in srgb, var(--go) 42%, transparent);
+  }
+}
+
+html.motion-reduced *,
+html.motion-reduced ::before,
+html.motion-reduced ::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+html.motion-reduced.js [data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+/* The welcome stagger is mostly *delay*, which a shortened duration does not
+   remove: without this the sentence and PLAY would sit invisible for ~1.2s. */
+html.motion-reduced .welcome-aurora::before,
+html.motion-reduced .welcome-bars i,
+html.motion-reduced .welcome-kicker,
+html.motion-reduced .welcome-line .w,
+html.motion-reduced .welcome-play {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  .skeleton-bar {
+    animation: none;
+    background: var(--bg-2);
+  }
+
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .welcome-aurora::before,
+  .welcome-bars i,
+  .welcome-kicker,
+  .welcome-line .w,
+  .welcome-play {
+    animation: none;
+  }
+
+  /* Selection must stay legible without any movement, so the filled/outlined
+     contrast carries it on its own. */
+  .chip,
+  .chip:hover,
+  .mode:hover {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 44rem) {
+  main {
+    padding: var(--s5) var(--s4) var(--s7);
+  }
+
+  .topbar {
+    padding: var(--s3) var(--s4);
+  }
+
+  .mode {
+    padding: var(--s4);
+  }
+
+  .mode-name {
+    font-size: var(--t-lg);
+  }
+
+  .segmented {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+  }
+
+  .segmented button {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s3);
+  }
+
+  .play {
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+
+  /* Three zones do not fit a phone's top bar: the breadcrumb yields, and the
+     shortcut keycaps (there is no keyboard) go with it. */
+  .breadcrumb,
+  .keybtn::before {
+    display: none;
+  }
+
+  .wordmark {
+    grid-column: 2;
+  }
+
+  .topbar-actions {
+    grid-column: 3;
+  }
+
+  .wave-wrap {
+    height: 4.5rem;
+  }
+
+  .rung {
+    font-size: 0.625rem;
+    padding: var(--s2) 0;
+  }
+
+  .reveal-card {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'verdict' 'art' 'meta';
+    justify-items: start;
+  }
+
+  .daily-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ==========================================================================
+   Player v2: one compact card for transport, waveform and attempt progress.
+   Replaces the big play disc, the bordered waveform, the seven duration pills
+   and the empty attempt rows. Guess rows now exist only once a guess does.
+   ========================================================================== */
+
+.player {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--bg-2);
+  box-shadow: none;
+}
+
+.transport {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.play {
+  position: relative;
+  width: 2.75rem;
+  height: 2.75rem;
+  box-shadow: none;
+}
+
+.play svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.play:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+
+.play.playing {
+  box-shadow: none;
+}
+
+/* A single soft ring while audio is sounding: the only ornament. */
+.play.playing::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid var(--go);
+  border-radius: 50%;
+  opacity: 0;
+  animation: play-ring 1.6s var(--ease) infinite;
+  pointer-events: none;
+}
+
+@keyframes play-ring {
+  from {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+.readout {
+  display: grid;
+  gap: 3px;
+  line-height: 1;
+  min-width: 0;
+}
+
+.readout-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.readout-val {
+  font-size: var(--t-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.attempt {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--ink-3);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.scope {
+  gap: 6px;
+}
+
+.wave-wrap {
+  height: 3.25rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.wave-meta {
+  font-family: var(--mono);
+}
+
+/* Progress rail: one thin segment per attempt, labelled with its clip length.
+   Used segments take the colour of what happened; the current one breathes. */
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.rung,
+.rung.lit,
+.rung.now,
+.rung.used {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  text-align: center;
+}
+
+.rung i {
+  display: block;
+  height: 5px;
+  border-radius: var(--pill);
+  background: var(--bg-3);
+  transition: background var(--med) var(--ease), transform var(--med) var(--ease);
+}
+
+.rung b {
+  font-weight: 400;
+  transition: color var(--med) var(--ease);
+}
+
+.rung.used i {
+  background: var(--ink-3);
+}
+.rung.used.wrong i {
+  background: var(--bad);
+}
+.rung.used.close i {
+  background: var(--close);
+}
+.rung.used.skip i {
+  background: var(--line-2);
+}
+.rung.used.correct i {
+  background: var(--go);
+}
+
+.rung.now i {
+  background: var(--go);
+  animation: rung-breathe 2.4s ease-in-out infinite;
+}
+
+.rung.now b {
+  color: var(--go-text);
+}
+
+@keyframes rung-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.volume {
+  gap: var(--s3);
+}
+
+/* History: only real guesses, one tight line each. */
+.guesses {
+  display: grid;
+  gap: 4px;
+}
+
+.guesses:empty {
+  display: none;
+}
+
+.guess-row {
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+  gap: var(--s3);
+  min-height: 2.25rem;
+  padding: 0.35rem var(--s3);
+  border-radius: 12px;
+  background: var(--bg-2);
+  color: var(--ink-2);
+}
+
+.guess-row.just {
+  animation: row-in 320ms var(--ease) backwards;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.guess-row .mark {
+  text-align: center;
+  font-size: var(--t-sm);
+}
+
+@media (max-width: 44rem) {
+  .player {
+    padding: var(--s3);
+  }
+  .play {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  .wave-wrap {
+    height: 3rem;
+  }
+  .rung,
+  .rung.lit,
+  .rung.now,
+  .rung.used {
+    font-size: 0.625rem;
+    padding: 0;
+  }
+}
+
+/* Welcome logo: the character portrait replaces the animated bars. */
+.welcome-logo {
+  display: block;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--line-2);
+  animation: rise 640ms var(--ease) backwards;
+}
+@media (max-width: 44rem) {
+  .welcome-logo {
+    width: 7rem;
+    height: 7rem;
+  }
+}
